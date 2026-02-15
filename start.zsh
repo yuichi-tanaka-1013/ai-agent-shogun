@@ -42,7 +42,12 @@ echo "ashigaru1" > "$SCRIPT_DIR/.agent_id_$ASHIGARU_PANE"
 sleep 0.5
 echo -e "cd $SCRIPT_DIR && claude --dangerously-skip-permissions\n" | wezterm cli send-text --no-paste --pane-id "$KARO_PANE"
 echo "⏳ Karo Claude Code 起動待ち..."
-sleep 5
+sleep 3
+# Auto-pass permission confirmation screen (arrow down + Enter)
+printf '\x1b[B' | wezterm cli send-text --no-paste --pane-id "$KARO_PANE"
+sleep 0.3
+printf '\r' | wezterm cli send-text --no-paste --pane-id "$KARO_PANE"
+sleep 3
 
 # Send initial prompt to Karo
 KARO_INIT="私はkaroです。cat instructions/karo.mdを実行して内容を確認し、家老として待機してください。"
@@ -55,7 +60,12 @@ echo "✅ Karo 初期化完了"
 sleep 1
 echo -e "cd $SCRIPT_DIR && claude --dangerously-skip-permissions\n" | wezterm cli send-text --no-paste --pane-id "$ASHIGARU_PANE"
 echo "⏳ Ashigaru Claude Code 起動待ち..."
-sleep 5
+sleep 3
+# Auto-pass permission confirmation screen (arrow down + Enter)
+printf '\x1b[B' | wezterm cli send-text --no-paste --pane-id "$ASHIGARU_PANE"
+sleep 0.3
+printf '\r' | wezterm cli send-text --no-paste --pane-id "$ASHIGARU_PANE"
+sleep 3
 
 # Send initial prompt to Ashigaru
 ASHIGARU_INIT="私はashigaru1です。cat instructions/ashigaru.mdを実行して内容を確認し、足軽として待機してください。"
