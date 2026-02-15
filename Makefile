@@ -21,18 +21,20 @@ clean:
 	rm -rf logs/
 	echo "messages: []" > queue/inbox/shogun.yaml
 	echo "messages: []" > queue/inbox/karo.yaml
-	echo "messages: []" > queue/inbox/ashigaru1.yaml
+	for i in 1 2 3 4 5 6 7 8; do echo "messages: []" > queue/inbox/ashigaru$$i.yaml; done
 
 test: build
-	./mini-shogun write karo "テストメッセージ" test shogun
-	cat queue/inbox/karo.yaml
+	./mini-shogun write shogun "テストメッセージ" cmd lord
+	cat queue/inbox/shogun.yaml
 
 help:
 	@echo "Mini Shogun - 利用可能なターゲット:"
 	@echo "  build    - Go実行ファイルのビルド"
-	@echo "  run      - ビルド後に起動"
+	@echo "  run      - ビルド後に起動 (10 agents)"
 	@echo "  stop     - 停止"
 	@echo "  restart  - 再起動"
 	@echo "  clean    - クリーンアップ"
 	@echo "  test     - テスト実行"
 	@echo "  help     - このヘルプを表示"
+	@echo ""
+	@echo "階層: 殿(Lord) → 将軍(Shogun) → 家老(Karo) → 足軽1-8(Ashigaru)"

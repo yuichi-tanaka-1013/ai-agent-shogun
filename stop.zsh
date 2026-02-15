@@ -12,8 +12,19 @@ pkill -f 'mini-shogun watch' 2>/dev/null && echo "✅ Watchers stopped" || echo 
 # Kill agent panes
 if [[ -f "$PANE_FILE" ]]; then
     source "$PANE_FILE"
+
+    # Kill Shogun pane
+    [[ -n "${shogun:-}" ]] && wezterm cli kill-pane --pane-id "$shogun" 2>/dev/null && echo "✅ Shogun pane closed"
+
+    # Kill Karo pane
     [[ -n "${karo:-}" ]] && wezterm cli kill-pane --pane-id "$karo" 2>/dev/null && echo "✅ Karo pane closed"
-    [[ -n "${ashigaru1:-}" ]] && wezterm cli kill-pane --pane-id "$ashigaru1" 2>/dev/null && echo "✅ Ashigaru pane closed"
+
+    # Kill Ashigaru panes 1-8
+    for i in {1..8}; do
+        var="ashigaru$i"
+        [[ -n "${(P)var:-}" ]] && wezterm cli kill-pane --pane-id "${(P)var}" 2>/dev/null && echo "✅ Ashigaru$i pane closed"
+    done
+
     rm -f "$PANE_FILE"
 fi
 
