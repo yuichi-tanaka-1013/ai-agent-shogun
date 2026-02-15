@@ -1,0 +1,12 @@
+# Binary
+mini-shogun
+
+# Generated
+.pane_ids
+logs/
+*.lock
+*.tmp.*
+
+# Optional: track or ignore queue data
+# queue/inbox/*.yaml
+# queue/tasks/*.yaml
