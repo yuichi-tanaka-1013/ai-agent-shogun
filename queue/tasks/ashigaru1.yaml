@@ -1,0 +1,41 @@
+task_id: task_004
+status: completed
+description: |
+  start.zshの画面分割レイアウトを以下のように修正せよ。
+
+  【現状】
+  Lord | Shogun | Karo
+       |        | Ashigaru1-8 (4行x2列)
+
+  【新レイアウト】
+  TOP (50%)
+  ├─ LEFT   → shogun
+  └─ RIGHT
+     ├─ ashigaru1
+     ├─ ashigaru2
+     ├─ ashigaru5
+     └─ ashigaru6
+
+  BOTTOM (50%)
+  ├─ LEFT   → karo
+  └─ RIGHT
+     ├─ ashigaru3
+     ├─ ashigaru4
+     ├─ ashigaru7
+     └─ ashigaru8
+
+  【具体的な修正内容】
+  1. line 63-71: Shogun/Karo配置をTOP/BOTTOMの左側に変更
+  2. line 76-106: Ashigaruペインの配置を変更
+     - TOP右側: ashigaru1,2,5,6 (2行x2列)
+     - BOTTOM右側: ashigaru3,4,7,8 (2行x2列)
+  3. コメント(line 56-61)も新レイアウトに合わせて更新
+
+  【注意】
+  - Lordペインは現状維持（Lord | [残り全体]）
+  - wezterm cli split-pane の --percent, --right, --bottom を適切に使用
+  - 完了後は必ず報告せよ
+
+assigned_to: ashigaru1
+assigned_by: karo
+created_at: "2026-02-15T17:34:00+09:00"

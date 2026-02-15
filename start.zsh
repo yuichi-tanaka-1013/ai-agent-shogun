@@ -2,22 +2,27 @@
 set -eu
 
 SCRIPT_DIR="${0:A:h}"
-cd "$SCRIPT_DIR"
+WORK_DIR="${PWD}"
 
 echo "🏯 Mini Shogun 起動中..."
+echo "📂 作業ディレクトリ: $WORK_DIR"
+echo "📦 Mini Shogun: $SCRIPT_DIR"
 
 # Check dependencies
 command -v fswatch &>/dev/null || { echo "❌ fswatch not found. brew install fswatch"; exit 1; }
 command -v wezterm &>/dev/null || { echo "❌ wezterm CLI not found."; exit 1; }
 command -v claude &>/dev/null || { echo "❌ claude CLI not found."; exit 1; }
-[[ -f "./mini-shogun" ]] || { echo "❌ mini-shogun binary not found. Run: go build -o mini-shogun ."; exit 1; }
+[[ -f "$SCRIPT_DIR/mini-shogun" ]] || { echo "❌ mini-shogun binary not found. Run: go build -o mini-shogun ."; exit 1; }
 
-# Initialize inbox files
-mkdir -p queue/inbox queue/tasks logs
+# Initialize inbox files (in SCRIPT_DIR)
+mkdir -p "$SCRIPT_DIR/queue/inbox" "$SCRIPT_DIR/queue/tasks" "$SCRIPT_DIR/logs"
 AGENTS=(shogun karo ashigaru1 ashigaru2 ashigaru3 ashigaru4 ashigaru5 ashigaru6 ashigaru7 ashigaru8)
 for agent in "${AGENTS[@]}"; do
-    [[ -f "queue/inbox/${agent}.yaml" ]] || echo "messages: []" > "queue/inbox/${agent}.yaml"
+    [[ -f "$SCRIPT_DIR/queue/inbox/${agent}.yaml" ]] || echo "messages: []" > "$SCRIPT_DIR/queue/inbox/${agent}.yaml"
 done
+
+# Save work directory for agents
+echo "$WORK_DIR" > "$SCRIPT_DIR/.work_dir"
 
 # Store pane IDs
 PANE_FILE="$SCRIPT_DIR/.pane_ids"
@@ -54,56 +59,67 @@ start_agent() {
 }
 
 # Create panes layout:
-# Lord | Shogun | Karo
-#      |        | Ashigaru1 | Ashigaru2
-#      |        | Ashigaru3 | Ashigaru4
-#      |        | Ashigaru5 | Ashigaru6
-#      |        | Ashigaru7 | Ashigaru8
+# Lord | TOP:    Shogun | Ashigaru1 | Ashigaru2
+#      |                | Ashigaru5 | Ashigaru6
+#      | BOTTOM: Karo   | Ashigaru3 | Ashigaru4
+#      |                | Ashigaru7 | Ashigaru8
 
-# Create Shogun pane (right of Lord)
-SHOGUN_PANE=$(wezterm cli split-pane --right --percent 80)
+# Create TOP pane (right of Lord, will hold Shogun + Ashigaru 1,2,5,6)
+TOP_PANE=$(wezterm cli split-pane --right --percent 80)
+
+# Create BOTTOM pane (below TOP, will hold Karo + Ashigaru 3,4,7,8)
+BOTTOM_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$TOP_PANE")
+
+# TOP_PANE becomes Shogun (left side of TOP)
+SHOGUN_PANE="$TOP_PANE"
 echo "shogun=$SHOGUN_PANE" >> "$PANE_FILE"
 echo "✅ Shogun pane: $SHOGUN_PANE"
 
-# Create Karo pane (right of Shogun)
-KARO_PANE=$(wezterm cli split-pane --right --percent 75 --pane-id "$SHOGUN_PANE")
+# BOTTOM_PANE becomes Karo (left side of BOTTOM)
+KARO_PANE="$BOTTOM_PANE"
 echo "karo=$KARO_PANE" >> "$PANE_FILE"
 echo "✅ Karo pane: $KARO_PANE"
 
-# Create Ashigaru panes (below Karo, in pairs)
+# Create Ashigaru panes
 ASHIGARU_PANES=()
 
-# Row 1: Ashigaru 1-2
-A1_PANE=$(wezterm cli split-pane --bottom --percent 80 --pane-id "$KARO_PANE")
+# TOP-RIGHT: Ashigaru 1,2,5,6 (2x2 grid)
+# Create right column of TOP (for Ashigaru 1,2,5,6)
+A1_PANE=$(wezterm cli split-pane --right --percent 67 --pane-id "$SHOGUN_PANE")
+# Split A1 horizontally for A2
 A2_PANE=$(wezterm cli split-pane --right --percent 50 --pane-id "$A1_PANE")
-ASHIGARU_PANES+=("$A1_PANE" "$A2_PANE")
+# Split A1 vertically for A5
+A5_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A1_PANE")
+# Split A2 vertically for A6
+A6_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A2_PANE")
+ASHIGARU_PANES[1]="$A1_PANE"
+ASHIGARU_PANES[2]="$A2_PANE"
+ASHIGARU_PANES[5]="$A5_PANE"
+ASHIGARU_PANES[6]="$A6_PANE"
 echo "ashigaru1=$A1_PANE" >> "$PANE_FILE"
 echo "ashigaru2=$A2_PANE" >> "$PANE_FILE"
-echo "✅ Ashigaru1 pane: $A1_PANE, Ashigaru2 pane: $A2_PANE"
-
-# Row 2: Ashigaru 3-4
-A3_PANE=$(wezterm cli split-pane --bottom --percent 75 --pane-id "$A1_PANE")
-A4_PANE=$(wezterm cli split-pane --right --percent 50 --pane-id "$A3_PANE")
-ASHIGARU_PANES+=("$A3_PANE" "$A4_PANE")
-echo "ashigaru3=$A3_PANE" >> "$PANE_FILE"
-echo "ashigaru4=$A4_PANE" >> "$PANE_FILE"
-echo "✅ Ashigaru3 pane: $A3_PANE, Ashigaru4 pane: $A4_PANE"
-
-# Row 3: Ashigaru 5-6
-A5_PANE=$(wezterm cli split-pane --bottom --percent 66 --pane-id "$A3_PANE")
-A6_PANE=$(wezterm cli split-pane --right --percent 50 --pane-id "$A5_PANE")
-ASHIGARU_PANES+=("$A5_PANE" "$A6_PANE")
 echo "ashigaru5=$A5_PANE" >> "$PANE_FILE"
 echo "ashigaru6=$A6_PANE" >> "$PANE_FILE"
-echo "✅ Ashigaru5 pane: $A5_PANE, Ashigaru6 pane: $A6_PANE"
+echo "✅ TOP-RIGHT: Ashigaru1=$A1_PANE, Ashigaru2=$A2_PANE, Ashigaru5=$A5_PANE, Ashigaru6=$A6_PANE"
 
-# Row 4: Ashigaru 7-8
-A7_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A5_PANE")
-A8_PANE=$(wezterm cli split-pane --right --percent 50 --pane-id "$A7_PANE")
-ASHIGARU_PANES+=("$A7_PANE" "$A8_PANE")
+# BOTTOM-RIGHT: Ashigaru 3,4,7,8 (2x2 grid)
+# Create right column of BOTTOM (for Ashigaru 3,4,7,8)
+A3_PANE=$(wezterm cli split-pane --right --percent 67 --pane-id "$KARO_PANE")
+# Split A3 horizontally for A4
+A4_PANE=$(wezterm cli split-pane --right --percent 50 --pane-id "$A3_PANE")
+# Split A3 vertically for A7
+A7_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A3_PANE")
+# Split A4 vertically for A8
+A8_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A4_PANE")
+ASHIGARU_PANES[3]="$A3_PANE"
+ASHIGARU_PANES[4]="$A4_PANE"
+ASHIGARU_PANES[7]="$A7_PANE"
+ASHIGARU_PANES[8]="$A8_PANE"
+echo "ashigaru3=$A3_PANE" >> "$PANE_FILE"
+echo "ashigaru4=$A4_PANE" >> "$PANE_FILE"
 echo "ashigaru7=$A7_PANE" >> "$PANE_FILE"
 echo "ashigaru8=$A8_PANE" >> "$PANE_FILE"
-echo "✅ Ashigaru7 pane: $A7_PANE, Ashigaru8 pane: $A8_PANE"
+echo "✅ BOTTOM-RIGHT: Ashigaru3=$A3_PANE, Ashigaru4=$A4_PANE, Ashigaru7=$A7_PANE, Ashigaru8=$A8_PANE"
 
 echo ""
 echo "🚀 Claude Code エージェント起動開始..."

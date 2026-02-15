@@ -16,3 +16,6 @@
 |--------|------|----------|
 | task_001: README作成 | ashigaru1 | 2026-02-15 16:38 |
 | task_001: Makefile helpターゲット追加 | ashigaru1 | 2026-02-15 16:54 |
+| task_002: start.zshペイン分割修正 | ashigaru1 | 2026-02-15 17:15 |
+| task_003: start.zshペイン分割根本修正 | ashigaru1 | 2026-02-15 17:19 |
+| task_004: start.zsh画面分割レイアウト変更 | ashigaru1 | 2026-02-15 17:36 |

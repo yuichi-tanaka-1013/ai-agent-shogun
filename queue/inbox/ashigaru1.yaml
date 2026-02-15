@@ -1,1 +1,25 @@
-messages: []
+messages:
+    - id: msg_20260215_165314_0
+      from: karo
+      type: task_assigned
+      content: タスクを割り当てた。queue/tasks/ashigaru1.yamlを確認せよ
+      timestamp: "2026-02-15T16:53:14+09:00"
+      read: true
+    - id: msg_20260215_171348_6000
+      from: karo
+      type: task_assigned
+      content: タスクを割り当てた。queue/tasks/ashigaru1.yamlを確認せよ。start.zshのペイン分割を修正し、足軽4行を均等に配置する。
+      timestamp: "2026-02-15T17:13:48+09:00"
+      read: true
+    - id: msg_20260215_171810_2000
+      from: karo
+      type: task_assigned
+      content: 緊急タスク割当。queue/tasks/ashigaru1.yamlを確認せよ。line 77,85,93の--percent値を修正。優先度最高。
+      timestamp: "2026-02-15T17:18:10+09:00"
+      read: true
+    - id: msg_20260215_173407_9000
+      from: karo
+      type: task_assigned
+      content: タスクを割り当てた。queue/tasks/ashigaru1.yamlを確認せよ。start.zshの画面分割レイアウト変更。優先度高。
+      timestamp: "2026-02-15T17:34:07+09:00"
+      read: true
