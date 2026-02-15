@@ -12,7 +12,7 @@ echo "📦 Mini Shogun: $SCRIPT_DIR"
 command -v fswatch &>/dev/null || { echo "❌ fswatch not found. brew install fswatch"; exit 1; }
 command -v wezterm &>/dev/null || { echo "❌ wezterm CLI not found."; exit 1; }
 command -v claude &>/dev/null || { echo "❌ claude CLI not found."; exit 1; }
-[[ -f "$SCRIPT_DIR/mini-shogun" ]] || { echo "❌ mini-shogun binary not found. Run: go build -o mini-shogun ."; exit 1; }
+[[ -f "$SCRIPT_DIR/ai-agent-shogun" ]] || { echo "❌ ai-agent-shogun binary not found. Run: go build -o ai-agent-shogun ."; exit 1; }
 
 # Initialize inbox files (in SCRIPT_DIR)
 mkdir -p "$SCRIPT_DIR/queue/inbox" "$SCRIPT_DIR/queue/tasks" "$SCRIPT_DIR/logs"
@@ -144,10 +144,10 @@ done
 
 # Start watchers
 sleep 2
-nohup "$SCRIPT_DIR/mini-shogun" watch shogun "$SHOGUN_PANE" >> logs/watcher_shogun.log 2>&1 &
-nohup "$SCRIPT_DIR/mini-shogun" watch karo "$KARO_PANE" >> logs/watcher_karo.log 2>&1 &
+nohup "$SCRIPT_DIR/ai-agent-shogun" watch shogun "$SHOGUN_PANE" >> logs/watcher_shogun.log 2>&1 &
+nohup "$SCRIPT_DIR/ai-agent-shogun" watch karo "$KARO_PANE" >> logs/watcher_karo.log 2>&1 &
 for i in {1..8}; do
-    nohup "$SCRIPT_DIR/mini-shogun" watch "ashigaru$i" "${ASHIGARU_PANES[$i]}" >> "logs/watcher_ashigaru$i.log" 2>&1 &
+    nohup "$SCRIPT_DIR/ai-agent-shogun" watch "ashigaru$i" "${ASHIGARU_PANES[$i]}" >> "logs/watcher_ashigaru$i.log" 2>&1 &
 done
 echo "👁️ Watchers started (10 agents)"
 
@@ -161,6 +161,6 @@ echo "  将軍 (Shogun): $SHOGUN_PANE"
 echo "  家老 (Karo): $KARO_PANE"
 echo "  足軽 (Ashigaru): 1-8"
 echo ""
-echo "📬 Shogunに指示: ./mini-shogun write shogun \"命令\" cmd lord"
+echo "📬 Shogunに指示: ./ai-agent-shogun write shogun \"命令\" cmd lord"
 echo "🛑 停止: make stop"
 echo "═══════════════════════════════════════════════"

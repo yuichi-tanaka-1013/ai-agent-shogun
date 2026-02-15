@@ -1,4 +1,4 @@
-module mini-shogun
+module ai-agent-shogun
 
 go 1.25.5
 

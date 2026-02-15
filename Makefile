@@ -1,7 +1,7 @@
 .PHONY: build run clean test stop restart help
 
 build:
-	go build -o mini-shogun .
+	go build -o ai-agent-shogun .
 
 run: build
 	zsh start.zsh
@@ -15,7 +15,7 @@ restart: stop
 
 clean:
 	zsh stop.zsh || true
-	rm -f mini-shogun
+	rm -f ai-agent-shogun
 	rm -f queue/inbox/*.yaml queue/tasks/*.yaml
 	rm -f .pane_ids .agent_id_*
 	rm -rf logs/
@@ -24,7 +24,7 @@ clean:
 	for i in 1 2 3 4 5 6 7 8; do echo "messages: []" > queue/inbox/ashigaru$$i.yaml; done
 
 test: build
-	./mini-shogun write shogun "テストメッセージ" cmd lord
+	./ai-agent-shogun write shogun "テストメッセージ" cmd lord
 	cat queue/inbox/shogun.yaml
 
 help:

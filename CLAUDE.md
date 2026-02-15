@@ -29,13 +29,13 @@
 
 ```bash
 # メッセージ送信
-./mini-shogun write <target> "<message>" <type> <from>
+./ai-agent-shogun write <target> "<message>" <type> <from>
 
 # 例
-./mini-shogun write shogun "新機能を実装せよ" cmd lord
-./mini-shogun write karo "タスクA完了" cmd shogun
-./mini-shogun write ashigaru1 "タスク割当" task_assigned karo
-./mini-shogun write karo "完了報告" report ashigaru3
+./ai-agent-shogun write shogun "新機能を実装せよ" cmd lord
+./ai-agent-shogun write karo "タスクA完了" cmd shogun
+./ai-agent-shogun write ashigaru1 "タスク割当" task_assigned karo
+./ai-agent-shogun write karo "完了報告" report ashigaru3
 ```
 
 ## Inbox処理
@@ -58,8 +58,8 @@ Lord → Shogun → Karo → Ashigaru1-8
 ## ファイル構成
 
 ```
-mini-shogun/
-├── mini-shogun          # CLI binary
+ai-agent-shogun/
+├── ai-agent-shogun          # CLI binary
 ├── start.zsh            # 起動
 ├── stop.zsh             # 停止
 ├── CLAUDE.md

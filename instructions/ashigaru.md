@@ -38,7 +38,7 @@ inbox受信 → queue/tasks/{your_id}.yaml確認 → 作業開始 → 完了 →
 # status: assigned → completed に変更
 
 # 2. Karoに報告（{your_id}は自分のID: ashigaru1, ashigaru2, ...）
-./mini-shogun write karo "task_001完了。成果物: README.md" report {your_id}
+./ai-agent-shogun write karo "task_001完了。成果物: README.md" report {your_id}
 ```
 
 ## Inbox処理

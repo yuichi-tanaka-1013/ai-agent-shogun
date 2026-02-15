@@ -35,13 +35,13 @@ Shogun → Karo → Ashigaru
 ```bash
 # リポジトリをクローン
 git clone <repository-url>
-cd mini-shogun
+cd ai-agent-shogun
 
 # バイナリをビルド
 make build
 
 # または直接ビルド
-go build -o mini-shogun .
+go build -o ai-agent-shogun .
 ```
 
 ## 使い方
@@ -60,13 +60,13 @@ zsh start.zsh
 
 ```bash
 # 基本構文
-./mini-shogun write <target> "<message>" <type> <from>
+./ai-agent-shogun write <target> "<message>" <type> <from>
 
 # 例: ShogunからKaroへコマンド送信
-./mini-shogun write karo "README.mdを作成せよ" cmd shogun
+./ai-agent-shogun write karo "README.mdを作成せよ" cmd shogun
 
 # 例: AshigaruからKaroへ完了報告
-./mini-shogun write karo "task_001完了" report ashigaru1
+./ai-agent-shogun write karo "task_001完了" report ashigaru1
 ```
 
 ### システム停止
@@ -74,7 +74,7 @@ zsh start.zsh
 ```bash
 make stop
 # または
-pkill -f 'mini-shogun watch'
+pkill -f 'ai-agent-shogun watch'
 ```
 
 ### クリーンアップ
@@ -86,8 +86,8 @@ make clean
 ## ファイル構成
 
 ```
-mini-shogun/
-├── mini-shogun          # CLIバイナリ
+ai-agent-shogun/
+├── ai-agent-shogun          # CLIバイナリ
 ├── main.go              # CLIソースコード
 ├── start.zsh            # 起動スクリプト
 ├── Makefile
@@ -108,8 +108,8 @@ mini-shogun/
 
 ## 動作の仕組み
 
-1. **メッセージ送信**: `mini-shogun write`コマンドでYAMLファイルにメッセージを追加
-2. **ファイル監視**: `mini-shogun watch`がfswatch経由でinboxファイルの変更を検知
+1. **メッセージ送信**: `ai-agent-shogun write`コマンドでYAMLファイルにメッセージを追加
+2. **ファイル監視**: `ai-agent-shogun watch`がfswatch経由でinboxファイルの変更を検知
 3. **通知送信**: 未読メッセージがあれば、WezTerm CLIで対象ペインに`inboxN`を送信
 4. **処理実行**: エージェントがinboxを確認し、タスクを実行
 

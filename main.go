@@ -37,7 +37,7 @@ func main() {
 	switch cmd {
 	case "write":
 		if len(os.Args) < 4 {
-			fmt.Fprintln(os.Stderr, "Usage: mini-shogun write <target> <message> [type] [from]")
+			fmt.Fprintln(os.Stderr, "Usage: ai-agent-shogun write <target> <message> [type] [from]")
 			os.Exit(1)
 		}
 		target := os.Args[2]
@@ -57,7 +57,7 @@ func main() {
 
 	case "watch":
 		if len(os.Args) < 4 {
-			fmt.Fprintln(os.Stderr, "Usage: mini-shogun watch <agent_id> <pane_id>")
+			fmt.Fprintln(os.Stderr, "Usage: ai-agent-shogun watch <agent_id> <pane_id>")
 			os.Exit(1)
 		}
 		agentID := os.Args[2]
@@ -81,8 +81,8 @@ Commands:
   watch <agent_id> <pane_id>              Watch inbox and send nudges
 
 Examples:
-  mini-shogun write karo "タスク完了" report ashigaru1
-  mini-shogun watch karo 5`)
+  ai-agent-shogun write karo "タスク完了" report ashigaru1
+  ai-agent-shogun watch karo 5`)
 }
 
 func getProjectRoot() string {
