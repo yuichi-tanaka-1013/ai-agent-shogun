@@ -15,6 +15,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const maxLogSize = 10 * 1024 * 1024 // 10MB
+
 // validAgentIDs is the allowlist of valid agent identifiers
 var validAgentIDs = map[string]bool{
 	"shogun":   true,
@@ -269,6 +271,15 @@ func writeInbox(target, message, msgType, from string) error {
 		}
 	}
 
+	// Trim read messages to prevent inbox from growing indefinitely
+	unread := make([]Message, 0, len(inbox.Messages))
+	for _, msg := range inbox.Messages {
+		if !msg.Read {
+			unread = append(unread, msg)
+		}
+	}
+	inbox.Messages = unread
+
 	// Create new message
 	newMsg := Message{
 		ID:        generateMsgID(),
@@ -318,6 +329,9 @@ func watchInbox(agentID, paneID string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
+	// Determine log file path for rotation (stdout is redirected to this file by start.zsh)
+	logPath := filepath.Join(getDataDir(), "logs", fmt.Sprintf("watcher_%s.log", agentID))
+
 	fmt.Printf("[%s] inbox_watcher started — agent: %s, pane: %s\n",
 		time.Now().Format("2006-01-02 15:04:05"), agentID, paneID)
 
@@ -326,7 +340,13 @@ func watchInbox(agentID, paneID string) error {
 
 	// Main loop with fswatch
 	timeout := 30 // seconds
+	loopCount := 0
 	for {
+		// Check log size every 100 iterations (~50 minutes at 30s timeout)
+		loopCount++
+		if loopCount%100 == 0 {
+			rotateLogIfNeeded(logPath)
+		}
 		// Check if shutdown requested
 		select {
 		case <-ctx.Done():
@@ -412,6 +432,25 @@ func processUnread(agentID, paneID string) {
 	if unreadCount > 0 {
 		sendWakeup(paneID, unreadCount)
 	}
+}
+
+// rotateLogIfNeeded rotates the log file if it exceeds maxLogSize
+func rotateLogIfNeeded(logPath string) {
+	info, err := os.Stat(logPath)
+	if err != nil {
+		return
+	}
+	if info.Size() < maxLogSize {
+		return
+	}
+	prevPath := logPath + ".prev"
+	os.Remove(prevPath)
+	os.Rename(logPath, prevPath)
+	// Reopen: since start.zsh uses >> redirect, the fd still points to the renamed file.
+	// New writes after rename will create a fresh file via the shell redirect.
+	// This is best-effort; the shell's append redirect will recreate the file on next write.
+	fmt.Printf("[%s] Log rotated: %s (was %d bytes)\n",
+		time.Now().Format("2006-01-02 15:04:05"), logPath, info.Size())
 }
 
 func sendWakeup(paneID string, unreadCount int) {

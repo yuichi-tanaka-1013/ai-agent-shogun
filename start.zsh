@@ -174,6 +174,12 @@ export AI_AGENT_SHOGUN_WORKDIR="$WORK_DIR"
 WATCHER_PID_FILE="$DATA_DIR/.watcher_pids"
 > "$WATCHER_PID_FILE"
 
+# Rotate old watcher logs (keep previous as .prev)
+for logfile in "$DATA_DIR"/logs/watcher_*.log; do
+    [[ -f "$logfile" ]] || continue
+    mv "$logfile" "${logfile}.prev"
+done
+
 nohup ai-agent-shogun watch shogun "$SHOGUN_PANE" >> "$DATA_DIR/logs/watcher_shogun.log" 2>&1 &
 echo $! >> "$WATCHER_PID_FILE"
 nohup ai-agent-shogun watch karo "$KARO_PANE" >> "$DATA_DIR/logs/watcher_karo.log" 2>&1 &
