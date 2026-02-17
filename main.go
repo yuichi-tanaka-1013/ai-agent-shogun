@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
+	"crypto/rand"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -11,6 +14,30 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+// validAgentIDs is the allowlist of valid agent identifiers
+var validAgentIDs = map[string]bool{
+	"shogun":   true,
+	"karo":     true,
+	"ashigaru1": true, "ashigaru2": true, "ashigaru3": true, "ashigaru4": true,
+	"ashigaru5": true, "ashigaru6": true, "ashigaru7": true, "ashigaru8": true,
+}
+
+// validateAgentID checks that the agent ID is in the allowlist
+func validateAgentID(agentID string) error {
+	if !validAgentIDs[agentID] {
+		return fmt.Errorf("invalid agent ID: %q (allowed: shogun, karo, ashigaru1-8)", agentID)
+	}
+	return nil
+}
+
+// generateMsgID generates a unique message ID using timestamp and random bytes
+func generateMsgID() string {
+	now := time.Now()
+	b := make([]byte, 4)
+	rand.Read(b)
+	return fmt.Sprintf("msg_%s_%x", now.Format("20060102_150405"), b)
+}
 
 // Message represents an inbox message
 type Message struct {
@@ -35,12 +62,28 @@ func main() {
 
 	cmd := os.Args[1]
 	switch cmd {
+	case "start":
+		if err := startAgents(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+	case "stop":
+		if err := stopAgents(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
 	case "write":
 		if len(os.Args) < 4 {
 			fmt.Fprintln(os.Stderr, "Usage: ai-agent-shogun write <target> <message> [type] [from]")
 			os.Exit(1)
 		}
 		target := os.Args[2]
+		if err := validateAgentID(target); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		message := os.Args[3]
 		msgType := "message"
 		from := "unknown"
@@ -61,6 +104,10 @@ func main() {
 			os.Exit(1)
 		}
 		agentID := os.Args[2]
+		if err := validateAgentID(agentID); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		paneID := os.Args[3]
 		if err := watchInbox(agentID, paneID); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -74,29 +121,116 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`Mini Shogun CLI
+	fmt.Println(`AI Agent Shogun CLI
 
 Commands:
+  start                                   Start agents in current directory
+  stop                                    Stop all agents
   write <target> <message> [type] [from]  Send message to agent's inbox
   watch <agent_id> <pane_id>              Watch inbox and send nudges
 
 Examples:
+  ai-agent-shogun start
+  ai-agent-shogun stop
   ai-agent-shogun write karo "タスク完了" report ashigaru1
-  ai-agent-shogun watch karo 5`)
+  ai-agent-shogun watch karo 5
+
+Environment:
+  AI_AGENT_SHOGUN_HOME    Tool home directory (default: ~/.ai-agent-shogun)
+  AI_AGENT_SHOGUN_WORKDIR Work directory (default: current directory)`)
 }
 
-func getProjectRoot() string {
-	// Get executable path
-	exe, err := os.Executable()
+// getHomeDir returns the tool's home directory (~/.ai-agent-shogun)
+func getHomeDir() string {
+	if env := os.Getenv("AI_AGENT_SHOGUN_HOME"); env != "" {
+		return env
+	}
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "."
 	}
-	return filepath.Dir(exe)
+	return filepath.Join(home, ".ai-agent-shogun")
+}
+
+// getWorkDir returns the current work directory
+func getWorkDir() string {
+	if env := os.Getenv("AI_AGENT_SHOGUN_WORKDIR"); env != "" {
+		return env
+	}
+	// Check if .work_dir file exists in .ai-agent-shogun/ of cwd
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	workDirFile := filepath.Join(cwd, ".ai-agent-shogun", ".work_dir")
+	if data, err := os.ReadFile(workDirFile); err == nil {
+		return strings.TrimSpace(string(data))
+	}
+	return cwd
+}
+
+// getDataDir returns the data directory for current work session
+func getDataDir() string {
+	return filepath.Join(getWorkDir(), ".ai-agent-shogun")
 }
 
 func getInboxPath(agentID string) string {
-	root := getProjectRoot()
-	return filepath.Join(root, "queue", "inbox", agentID+".yaml")
+	return filepath.Join(getDataDir(), "queue", "inbox", agentID+".yaml")
+}
+
+// startAgents launches the agent system
+func startAgents() error {
+	homeDir := getHomeDir()
+	workDir := getWorkDir()
+
+	// Check if start.zsh exists in home directory
+	startScript := filepath.Join(homeDir, "start.zsh")
+	if _, err := os.Stat(startScript); os.IsNotExist(err) {
+		return fmt.Errorf("start.zsh not found in %s. Run 'make install' first", homeDir)
+	}
+
+	fmt.Printf("🏯 AI Agent Shogun 起動中...\n")
+	fmt.Printf("📂 作業ディレクトリ: %s\n", workDir)
+	fmt.Printf("📦 ホームディレクトリ: %s\n", homeDir)
+
+	// Run start.zsh with environment variables
+	cmd := exec.Command("zsh", startScript)
+	cmd.Dir = workDir
+	cmd.Env = append(os.Environ(),
+		"AI_AGENT_SHOGUN_HOME="+homeDir,
+		"AI_AGENT_SHOGUN_WORKDIR="+workDir,
+	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	return cmd.Run()
+}
+
+// stopAgents stops the agent system
+func stopAgents() error {
+	homeDir := getHomeDir()
+	workDir := getWorkDir()
+
+	// Check if stop.zsh exists in home directory
+	stopScript := filepath.Join(homeDir, "stop.zsh")
+	if _, err := os.Stat(stopScript); os.IsNotExist(err) {
+		return fmt.Errorf("stop.zsh not found in %s. Run 'make install' first", homeDir)
+	}
+
+	fmt.Printf("🛑 AI Agent Shogun 停止中...\n")
+
+	// Run stop.zsh with environment variables
+	cmd := exec.Command("zsh", stopScript)
+	cmd.Dir = workDir
+	cmd.Env = append(os.Environ(),
+		"AI_AGENT_SHOGUN_HOME="+homeDir,
+		"AI_AGENT_SHOGUN_WORKDIR="+workDir,
+	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }
 
 func writeInbox(target, message, msgType, from string) error {
@@ -136,13 +270,12 @@ func writeInbox(target, message, msgType, from string) error {
 	}
 
 	// Create new message
-	now := time.Now()
 	newMsg := Message{
-		ID:        fmt.Sprintf("msg_%s_%d", now.Format("20060102_150405"), now.UnixNano()%10000),
+		ID:        generateMsgID(),
 		From:      from,
 		Type:      msgType,
 		Content:   message,
-		Timestamp: now.Format(time.RFC3339),
+		Timestamp: time.Now().Format(time.RFC3339),
 		Read:      false,
 	}
 
@@ -181,6 +314,10 @@ func watchInbox(agentID, paneID string) error {
 		}
 	}
 
+	// Set up signal handling for graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+
 	fmt.Printf("[%s] inbox_watcher started — agent: %s, pane: %s\n",
 		time.Now().Format("2006-01-02 15:04:05"), agentID, paneID)
 
@@ -190,6 +327,15 @@ func watchInbox(agentID, paneID string) error {
 	// Main loop with fswatch
 	timeout := 30 // seconds
 	for {
+		// Check if shutdown requested
+		select {
+		case <-ctx.Done():
+			fmt.Printf("[%s] inbox_watcher shutting down — agent: %s\n",
+				time.Now().Format("2006-01-02 15:04:05"), agentID)
+			return nil
+		default:
+		}
+
 		// Run fswatch with timeout
 		cmd := exec.Command("fswatch", "-1", "--event", "Updated", "--event", "Renamed", inboxPath)
 		done := make(chan error, 1)
@@ -199,11 +345,22 @@ func watchInbox(agentID, paneID string) error {
 		}()
 
 		select {
+		case <-ctx.Done():
+			if cmd.Process != nil {
+				cmd.Process.Kill()
+				cmd.Wait()
+			}
+			fmt.Printf("[%s] inbox_watcher shutting down — agent: %s\n",
+				time.Now().Format("2006-01-02 15:04:05"), agentID)
+			return nil
 		case <-done:
 			// File changed
 		case <-time.After(time.Duration(timeout) * time.Second):
 			// Timeout - kill fswatch and check anyway
-			cmd.Process.Kill()
+			if cmd.Process != nil {
+				cmd.Process.Kill()
+				cmd.Wait()
+			}
 		}
 
 		time.Sleep(300 * time.Millisecond)
@@ -214,13 +371,34 @@ func watchInbox(agentID, paneID string) error {
 func processUnread(agentID, paneID string) {
 	inboxPath := getInboxPath(agentID)
 
+	// Acquire shared lock for safe reading
+	lockPath := inboxPath + ".lock"
+	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		fmt.Printf("[%s] WARNING: [%s] failed to open lock file: %v\n",
+			time.Now().Format("2006-01-02 15:04:05"), agentID, err)
+		return
+	}
+	defer lockFile.Close()
+
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_SH); err != nil {
+		fmt.Printf("[%s] WARNING: [%s] failed to acquire shared lock: %v\n",
+			time.Now().Format("2006-01-02 15:04:05"), agentID, err)
+		return
+	}
+	defer syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+
 	data, err := os.ReadFile(inboxPath)
 	if err != nil {
+		fmt.Printf("[%s] WARNING: [%s] failed to read inbox: %v\n",
+			time.Now().Format("2006-01-02 15:04:05"), agentID, err)
 		return
 	}
 
 	var inbox Inbox
 	if err := yaml.Unmarshal(data, &inbox); err != nil {
+		fmt.Printf("[%s] WARNING: [%s] failed to parse inbox YAML: %v\n",
+			time.Now().Format("2006-01-02 15:04:05"), agentID, err)
 		return
 	}
 

@@ -1,13 +1,28 @@
 #!/bin/zsh
 set -eu
 
-SCRIPT_DIR="${0:A:h}"
-PANE_FILE="$SCRIPT_DIR/.pane_ids"
+# HOME_DIR: Tool installation directory
+# WORK_DIR: Project directory where agents work
+HOME_DIR="${AI_AGENT_SHOGUN_HOME:-${0:A:h}}"
+WORK_DIR="${AI_AGENT_SHOGUN_WORKDIR:-${PWD}}"
+DATA_DIR="$WORK_DIR/.ai-agent-shogun"
+PANE_FILE="$DATA_DIR/.pane_ids"
 
-echo "🛑 Mini Shogun 停止中..."
+echo "🛑 AI Agent Shogun 停止中..."
+echo "📂 作業ディレクトリ: $WORK_DIR"
 
-# Stop watchers
-pkill -f 'ai-agent-shogun watch' 2>/dev/null && echo "✅ Watchers stopped" || echo "⚠️ No watchers running"
+# Stop watchers using PID file
+WATCHER_PID_FILE="$DATA_DIR/.watcher_pids"
+if [[ -f "$WATCHER_PID_FILE" ]]; then
+    while read -r pid; do
+        [[ -n "$pid" ]] && kill "$pid" 2>/dev/null
+    done < "$WATCHER_PID_FILE"
+    rm -f "$WATCHER_PID_FILE"
+    echo "✅ Watchers stopped (PID file)"
+else
+    # Fallback: pkill if PID file is missing
+    pkill -f 'ai-agent-shogun watch' 2>/dev/null && echo "✅ Watchers stopped (pkill fallback)" || echo "⚠️ No watchers running"
+fi
 
 # Kill agent panes
 if [[ -f "$PANE_FILE" ]]; then
@@ -29,6 +44,6 @@ if [[ -f "$PANE_FILE" ]]; then
 fi
 
 # Cleanup temp files
-rm -f "$SCRIPT_DIR"/.agent_id_* 2>/dev/null || true
+rm -f "$DATA_DIR"/.agent_id_* 2>/dev/null || true
 
-echo "🏯 Mini Shogun 停止完了"
+echo "🏯 AI Agent Shogun 停止完了"

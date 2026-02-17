@@ -1,31 +1,56 @@
 #!/bin/zsh
 set -eu
 
-SCRIPT_DIR="${0:A:h}"
-WORK_DIR="${PWD}"
+# HOME_DIR: Tool installation directory (instructions, binary)
+# WORK_DIR: Project directory where agents work
+HOME_DIR="${AI_AGENT_SHOGUN_HOME:-${0:A:h}}"
+WORK_DIR="${AI_AGENT_SHOGUN_WORKDIR:-${PWD}}"
+DATA_DIR="$WORK_DIR/.ai-agent-shogun"
 
-echo "🏯 Mini Shogun 起動中..."
+echo "🏯 AI Agent Shogun 起動中..."
 echo "📂 作業ディレクトリ: $WORK_DIR"
-echo "📦 Mini Shogun: $SCRIPT_DIR"
+echo "📦 ホームディレクトリ: $HOME_DIR"
 
 # Check dependencies
 command -v fswatch &>/dev/null || { echo "❌ fswatch not found. brew install fswatch"; exit 1; }
 command -v wezterm &>/dev/null || { echo "❌ wezterm CLI not found."; exit 1; }
 command -v claude &>/dev/null || { echo "❌ claude CLI not found."; exit 1; }
-[[ -f "$SCRIPT_DIR/ai-agent-shogun" ]] || { echo "❌ ai-agent-shogun binary not found. Run: go build -o ai-agent-shogun ."; exit 1; }
+command -v ai-agent-shogun &>/dev/null || { echo "❌ ai-agent-shogun not found in PATH. Run: make install"; exit 1; }
 
-# Initialize inbox files (in SCRIPT_DIR)
-mkdir -p "$SCRIPT_DIR/queue/inbox" "$SCRIPT_DIR/queue/tasks" "$SCRIPT_DIR/logs"
+# Initialize data directory in work dir
+mkdir -p "$DATA_DIR/queue/inbox" "$DATA_DIR/queue/tasks" "$DATA_DIR/logs"
 AGENTS=(shogun karo ashigaru1 ashigaru2 ashigaru3 ashigaru4 ashigaru5 ashigaru6 ashigaru7 ashigaru8)
 for agent in "${AGENTS[@]}"; do
-    [[ -f "$SCRIPT_DIR/queue/inbox/${agent}.yaml" ]] || echo "messages: []" > "$SCRIPT_DIR/queue/inbox/${agent}.yaml"
+    [[ -f "$DATA_DIR/queue/inbox/${agent}.yaml" ]] || echo "messages: []" > "$DATA_DIR/queue/inbox/${agent}.yaml"
 done
 
+# Initialize dashboard
+if [[ ! -f "$DATA_DIR/dashboard.md" ]]; then
+    cat > "$DATA_DIR/dashboard.md" << 'EOF'
+# Dashboard
+
+## 進捗状況
+
+| タスク | 担当 | 状態 | 更新日時 |
+|--------|------|------|----------|
+| — | — | — | — |
+
+## アクション待ち
+
+なし
+
+## 完了タスク
+
+| タスク | 担当 | 完了日時 |
+|--------|------|----------|
+EOF
+fi
+
 # Save work directory for agents
-echo "$WORK_DIR" > "$SCRIPT_DIR/.work_dir"
+echo "$WORK_DIR" > "$DATA_DIR/.work_dir"
 
 # Store pane IDs
-PANE_FILE="$SCRIPT_DIR/.pane_ids"
+PANE_FILE="$DATA_DIR/.pane_ids"
 LORD_PANE="${WEZTERM_PANE:-0}"
 echo "lord=$LORD_PANE" > "$PANE_FILE"
 echo "✅ Lord (殿) pane: $LORD_PANE"
@@ -37,10 +62,10 @@ start_agent() {
     local instruction_file=$3
 
     # Write agent ID file
-    echo "$agent_name" > "$SCRIPT_DIR/.agent_id_$pane_id"
+    echo "$agent_name" > "$DATA_DIR/.agent_id_$pane_id"
 
-    # Start Claude Code
-    echo -e "cd $SCRIPT_DIR && claude --dangerously-skip-permissions\n" | wezterm cli send-text --no-paste --pane-id "$pane_id"
+    # Start Claude Code in work directory
+    echo -e "cd $WORK_DIR && export AI_AGENT_SHOGUN_HOME=$HOME_DIR && export AI_AGENT_SHOGUN_WORKDIR=$WORK_DIR && claude --dangerously-skip-permissions\n" | wezterm cli send-text --no-paste --pane-id "$pane_id"
     sleep 3
 
     # Auto-pass permission confirmation screen
@@ -49,8 +74,8 @@ start_agent() {
     printf '\r' | wezterm cli send-text --no-paste --pane-id "$pane_id"
     sleep 3
 
-    # Send initial prompt
-    local init_msg="私は${agent_name}です。cat ${instruction_file}を実行して内容を確認し、役割に従って待機してください。"
+    # Send initial prompt (instruction file is in HOME_DIR)
+    local init_msg="私は${agent_name}です。cat ${HOME_DIR}/${instruction_file}を実行して内容を確認し、役割に従って待機してください。"
     wezterm cli send-text --pane-id "$pane_id" "$init_msg"
     sleep 0.2
     printf '\r' | wezterm cli send-text --no-paste --pane-id "$pane_id"
@@ -142,18 +167,26 @@ for i in {1..8}; do
     sleep 1
 done
 
-# Start watchers
+# Start watchers with environment variables
 sleep 2
-nohup "$SCRIPT_DIR/ai-agent-shogun" watch shogun "$SHOGUN_PANE" >> logs/watcher_shogun.log 2>&1 &
-nohup "$SCRIPT_DIR/ai-agent-shogun" watch karo "$KARO_PANE" >> logs/watcher_karo.log 2>&1 &
+export AI_AGENT_SHOGUN_HOME="$HOME_DIR"
+export AI_AGENT_SHOGUN_WORKDIR="$WORK_DIR"
+WATCHER_PID_FILE="$DATA_DIR/.watcher_pids"
+> "$WATCHER_PID_FILE"
+
+nohup ai-agent-shogun watch shogun "$SHOGUN_PANE" >> "$DATA_DIR/logs/watcher_shogun.log" 2>&1 &
+echo $! >> "$WATCHER_PID_FILE"
+nohup ai-agent-shogun watch karo "$KARO_PANE" >> "$DATA_DIR/logs/watcher_karo.log" 2>&1 &
+echo $! >> "$WATCHER_PID_FILE"
 for i in {1..8}; do
-    nohup "$SCRIPT_DIR/ai-agent-shogun" watch "ashigaru$i" "${ASHIGARU_PANES[$i]}" >> "logs/watcher_ashigaru$i.log" 2>&1 &
+    nohup ai-agent-shogun watch "ashigaru$i" "${ASHIGARU_PANES[$i]}" >> "$DATA_DIR/logs/watcher_ashigaru$i.log" 2>&1 &
+    echo $! >> "$WATCHER_PID_FILE"
 done
-echo "👁️ Watchers started (10 agents)"
+echo "👁️ Watchers started (10 agents, PIDs saved to $WATCHER_PID_FILE)"
 
 echo ""
 echo "═══════════════════════════════════════════════"
-echo "🏯 Mini Shogun 起動完了! (10 Claude Code agents)"
+echo "🏯 AI Agent Shogun 起動完了! (10 Claude Code agents)"
 echo ""
 echo "階層構造:"
 echo "  殿 (Lord): $LORD_PANE ← あなた"
@@ -161,6 +194,6 @@ echo "  将軍 (Shogun): $SHOGUN_PANE"
 echo "  家老 (Karo): $KARO_PANE"
 echo "  足軽 (Ashigaru): 1-8"
 echo ""
-echo "📬 Shogunに指示: ./ai-agent-shogun write shogun \"命令\" cmd lord"
-echo "🛑 停止: make stop"
+echo "📬 Shogunに指示: ai-agent-shogun write shogun \"命令\" cmd lord"
+echo "🛑 停止: ai-agent-shogun stop"
 echo "═══════════════════════════════════════════════"
