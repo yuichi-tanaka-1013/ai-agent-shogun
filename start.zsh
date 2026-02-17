@@ -19,7 +19,7 @@ command -v ai-agent-shogun &>/dev/null || { echo "❌ ai-agent-shogun not found 
 
 # Initialize data directory in work dir
 mkdir -p "$DATA_DIR/queue/inbox" "$DATA_DIR/queue/tasks" "$DATA_DIR/logs"
-AGENTS=(shogun karo ashigaru1 ashigaru2 ashigaru3 ashigaru4 ashigaru5 ashigaru6 ashigaru7 ashigaru8)
+AGENTS=(shogun karo ashigaru1 ashigaru2 ashigaru3 ashigaru4)
 for agent in "${AGENTS[@]}"; do
     [[ -f "$DATA_DIR/queue/inbox/${agent}.yaml" ]] || echo "messages: []" > "$DATA_DIR/queue/inbox/${agent}.yaml"
 done
@@ -85,14 +85,12 @@ start_agent() {
 
 # Create panes layout:
 # Lord | TOP:    Shogun | Ashigaru1 | Ashigaru2
-#      |                | Ashigaru5 | Ashigaru6
 #      | BOTTOM: Karo   | Ashigaru3 | Ashigaru4
-#      |                | Ashigaru7 | Ashigaru8
 
-# Create TOP pane (right of Lord, will hold Shogun + Ashigaru 1,2,5,6)
+# Create TOP pane (right of Lord, will hold Shogun + Ashigaru 1,2)
 TOP_PANE=$(wezterm cli split-pane --right --percent 80)
 
-# Create BOTTOM pane (below TOP, will hold Karo + Ashigaru 3,4,7,8)
+# Create BOTTOM pane (below TOP, will hold Karo + Ashigaru 3,4)
 BOTTOM_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$TOP_PANE")
 
 # TOP_PANE becomes Shogun (left side of TOP)
@@ -108,43 +106,23 @@ echo "✅ Karo pane: $KARO_PANE"
 # Create Ashigaru panes
 ASHIGARU_PANES=()
 
-# TOP-RIGHT: Ashigaru 1,2,5,6 (2x2 grid)
-# Create right column of TOP (for Ashigaru 1,2,5,6)
+# TOP-RIGHT: Ashigaru 1,2
 A1_PANE=$(wezterm cli split-pane --right --percent 67 --pane-id "$SHOGUN_PANE")
-# Split A1 horizontally for A2
 A2_PANE=$(wezterm cli split-pane --right --percent 50 --pane-id "$A1_PANE")
-# Split A1 vertically for A5
-A5_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A1_PANE")
-# Split A2 vertically for A6
-A6_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A2_PANE")
 ASHIGARU_PANES[1]="$A1_PANE"
 ASHIGARU_PANES[2]="$A2_PANE"
-ASHIGARU_PANES[5]="$A5_PANE"
-ASHIGARU_PANES[6]="$A6_PANE"
 echo "ashigaru1=$A1_PANE" >> "$PANE_FILE"
 echo "ashigaru2=$A2_PANE" >> "$PANE_FILE"
-echo "ashigaru5=$A5_PANE" >> "$PANE_FILE"
-echo "ashigaru6=$A6_PANE" >> "$PANE_FILE"
-echo "✅ TOP-RIGHT: Ashigaru1=$A1_PANE, Ashigaru2=$A2_PANE, Ashigaru5=$A5_PANE, Ashigaru6=$A6_PANE"
+echo "✅ TOP-RIGHT: Ashigaru1=$A1_PANE, Ashigaru2=$A2_PANE"
 
-# BOTTOM-RIGHT: Ashigaru 3,4,7,8 (2x2 grid)
-# Create right column of BOTTOM (for Ashigaru 3,4,7,8)
+# BOTTOM-RIGHT: Ashigaru 3,4
 A3_PANE=$(wezterm cli split-pane --right --percent 67 --pane-id "$KARO_PANE")
-# Split A3 horizontally for A4
 A4_PANE=$(wezterm cli split-pane --right --percent 50 --pane-id "$A3_PANE")
-# Split A3 vertically for A7
-A7_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A3_PANE")
-# Split A4 vertically for A8
-A8_PANE=$(wezterm cli split-pane --bottom --percent 50 --pane-id "$A4_PANE")
 ASHIGARU_PANES[3]="$A3_PANE"
 ASHIGARU_PANES[4]="$A4_PANE"
-ASHIGARU_PANES[7]="$A7_PANE"
-ASHIGARU_PANES[8]="$A8_PANE"
 echo "ashigaru3=$A3_PANE" >> "$PANE_FILE"
 echo "ashigaru4=$A4_PANE" >> "$PANE_FILE"
-echo "ashigaru7=$A7_PANE" >> "$PANE_FILE"
-echo "ashigaru8=$A8_PANE" >> "$PANE_FILE"
-echo "✅ BOTTOM-RIGHT: Ashigaru3=$A3_PANE, Ashigaru4=$A4_PANE, Ashigaru7=$A7_PANE, Ashigaru8=$A8_PANE"
+echo "✅ BOTTOM-RIGHT: Ashigaru3=$A3_PANE, Ashigaru4=$A4_PANE"
 
 echo ""
 echo "🚀 Claude Code エージェント起動開始..."
@@ -160,8 +138,8 @@ echo "⏳ Karo 起動中..."
 start_agent "$KARO_PANE" "karo" "instructions/karo.md"
 sleep 1
 
-# Start Ashigaru 1-8
-for i in {1..8}; do
+# Start Ashigaru 1-4
+for i in {1..4}; do
     echo "⏳ Ashigaru$i 起動中..."
     start_agent "${ASHIGARU_PANES[$i]}" "ashigaru$i" "instructions/ashigaru.md"
     sleep 1
@@ -184,21 +162,21 @@ nohup ai-agent-shogun watch shogun "$SHOGUN_PANE" >> "$DATA_DIR/logs/watcher_sho
 echo $! >> "$WATCHER_PID_FILE"
 nohup ai-agent-shogun watch karo "$KARO_PANE" >> "$DATA_DIR/logs/watcher_karo.log" 2>&1 &
 echo $! >> "$WATCHER_PID_FILE"
-for i in {1..8}; do
+for i in {1..4}; do
     nohup ai-agent-shogun watch "ashigaru$i" "${ASHIGARU_PANES[$i]}" >> "$DATA_DIR/logs/watcher_ashigaru$i.log" 2>&1 &
     echo $! >> "$WATCHER_PID_FILE"
 done
-echo "👁️ Watchers started (10 agents, PIDs saved to $WATCHER_PID_FILE)"
+echo "👁️ Watchers started (6 agents, PIDs saved to $WATCHER_PID_FILE)"
 
 echo ""
 echo "═══════════════════════════════════════════════"
-echo "🏯 AI Agent Shogun 起動完了! (10 Claude Code agents)"
+echo "🏯 AI Agent Shogun 起動完了! (6 Claude Code agents)"
 echo ""
 echo "階層構造:"
 echo "  殿 (Lord): $LORD_PANE ← あなた"
 echo "  将軍 (Shogun): $SHOGUN_PANE"
 echo "  家老 (Karo): $KARO_PANE"
-echo "  足軽 (Ashigaru): 1-8"
+echo "  足軽 (Ashigaru): 1-4"
 echo ""
 echo "📬 Shogunに指示: ai-agent-shogun write shogun \"命令\" cmd lord"
 echo "🛑 停止: ai-agent-shogun stop"

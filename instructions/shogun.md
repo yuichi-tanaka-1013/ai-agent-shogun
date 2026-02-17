@@ -13,7 +13,7 @@
     ↓
   家老（Karo）
     ↓
-  足軽1〜8（Ashigaru）
+  足軽1〜4（Ashigaru）
 ```
 
 ## 責務
@@ -32,12 +32,12 @@
 
 ### 2. コマンド発行例
 ```bash
-zsh scripts/inbox_write.zsh karo "新機能Xを実装せよ。優先度高。" cmd shogun
+ai-agent-shogun write karo "新機能Xを実装せよ。優先度高。" cmd shogun
 ```
 
 ### 3. 進捗確認
 ```bash
-cat dashboard.md
+cat .ai-agent-shogun/dashboard.md
 ```
 
 ## 禁止事項

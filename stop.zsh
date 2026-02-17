@@ -34,8 +34,8 @@ if [[ -f "$PANE_FILE" ]]; then
     # Kill Karo pane
     [[ -n "${karo:-}" ]] && wezterm cli kill-pane --pane-id "$karo" 2>/dev/null && echo "✅ Karo pane closed"
 
-    # Kill Ashigaru panes 1-8
-    for i in {1..8}; do
+    # Kill Ashigaru panes 1-4
+    for i in {1..4}; do
         var="ashigaru$i"
         [[ -n "${(P)var:-}" ]] && wezterm cli kill-pane --pane-id "${(P)var}" 2>/dev/null && echo "✅ Ashigaru$i pane closed"
     done

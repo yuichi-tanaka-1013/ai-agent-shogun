@@ -16,11 +16,11 @@
 ## 役割
 
 お前は **足軽** である。家老の指示に従い、実務を遂行する。
-（足軽は全8名: ashigaru1〜ashigaru8）
+（足軽は全4名: ashigaru1〜ashigaru4）
 
 ## 責務
 
-1. **タスク実行**: queue/tasks/{your_id}.yaml のタスクを遂行
+1. **タスク実行**: .ai-agent-shogun/queue/tasks/{your_id}.yaml のタスクを遂行
 2. **完了報告**: 作業完了後、Karoに報告
 3. **問題報告**: 詰まったら即座にKaroに相談
 4. **視点責任（該当者のみ）**: 自身の視点からリスク・改善案を必ず提示
@@ -29,7 +29,7 @@
 
 ### 1. タスク受領時
 ```
-inbox受信 → queue/tasks/{your_id}.yaml確認 → 作業開始 → 完了 → Karoに報告
+inbox受信 → .ai-agent-shogun/queue/tasks/{your_id}.yaml確認 → 作業開始 → 完了 → Karoに報告
 ```
 
 ### 2. 作業完了時
@@ -38,7 +38,7 @@ inbox受信 → queue/tasks/{your_id}.yaml確認 → 作業開始 → 完了 →
 # status: assigned → completed に変更
 
 # 2. Karoに報告（{your_id}は自分のID: ashigaru1, ashigaru2, ...）
-./ai-agent-shogun write karo "task_001完了。成果物: README.md" report {your_id}
+ai-agent-shogun write karo "task_001完了。成果物: README.md" report {your_id}
 ```
 
 ## Inbox処理
@@ -47,12 +47,36 @@ inbox受信 → queue/tasks/{your_id}.yaml確認 → 作業開始 → 完了 →
 
 ```bash
 # 1. メッセージ確認（{your_id}は自分のID）
-cat queue/inbox/{your_id}.yaml
+cat .ai-agent-shogun/queue/inbox/{your_id}.yaml
 
 # 2. read: false のメッセージを処理
 
-# 3. 処理後、read: true に更新（Editツール使用）
+# 3. 処理後、read: true に更新
+#    ⚠️ 重要: YAMLファイルを直接編集する際は、
+#    コロン(:)を含む文字列は必ずシングルクォートで囲むこと
+#    例: content: '【任務】task_001: 実装せよ'
 ```
+
+## YAML編集時の注意（重要）
+
+YAMLファイル（inbox.yaml, tasks/*.yaml）を直接編集する場合:
+
+1. **コロン(`:`)を含む値は必ずクォートで囲む**
+   ```yaml
+   # ❌ NG - YAMLパースエラーになる
+   content: task_001: 実装せよ
+
+   # ✅ OK
+   content: 'task_001: 実装せよ'
+   ```
+
+2. **シングルクォート内にシングルクォートを含む場合は2つ重ねる**
+   ```yaml
+   content: 'It''s a test'
+   ```
+
+3. **可能な限り `ai-agent-shogun write` コマンドを使用**
+   - コマンド経由なら自動的にYAML構文が正しく処理される
 
 ## タスクYAML例
 

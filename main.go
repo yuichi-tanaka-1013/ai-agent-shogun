@@ -22,13 +22,12 @@ var validAgentIDs = map[string]bool{
 	"shogun":   true,
 	"karo":     true,
 	"ashigaru1": true, "ashigaru2": true, "ashigaru3": true, "ashigaru4": true,
-	"ashigaru5": true, "ashigaru6": true, "ashigaru7": true, "ashigaru8": true,
 }
 
 // validateAgentID checks that the agent ID is in the allowlist
 func validateAgentID(agentID string) error {
 	if !validAgentIDs[agentID] {
-		return fmt.Errorf("invalid agent ID: %q (allowed: shogun, karo, ashigaru1-8)", agentID)
+		return fmt.Errorf("invalid agent ID: %q (allowed: shogun, karo, ashigaru1-4)", agentID)
 	}
 	return nil
 }
